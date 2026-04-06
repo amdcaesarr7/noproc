@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            width: 280px;
+            background: #0d0d10;
+            color: #f5f5f7;
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 18px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+
+        .logo {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .header h1 {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .status-dot {
+            margin-left: auto;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #30d158;
+            box-shadow: 0 0 6px #30d158;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.idle {
+            background: rgba(255,255,255,0.2);
+            box-shadow: none;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .now-playing {
+            padding: 16px 18px;
+        }
+
+        .label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.35);
+            margin-bottom: 12px;
+        }
+
+        .track-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .artwork {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: rgba(255,255,255,0.05);
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .track-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .track-title {
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.01em;
+        }
+
+        .track-artist {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .progress-bar {
+            margin-top: 14px;
+            height: 3px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7c3aed, #a855f7);
+            border-radius: 99px;
+            width: 0%;
+            transition: width 1.4s linear;
+        }
+
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.3);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 12px 18px 18px;
+        }
+
+        .ctrl-btn {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            font-size: 18px;
+        }
+
+        .ctrl-btn:hover {
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        .ctrl-btn.play {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            color: white;
+            width: 44px;
+            height: 44px;
+            font-size: 20px;
+            box-shadow: 0 4px 16px rgba(124,58,237,0.4);
+        }
+
+        .ctrl-btn.play:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 24px rgba(124,58,237,0.5);
+        }
+
+        .idle-state {
+            padding: 24px 18px;
+            text-align: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .idle-state .icon { font-size: 28px; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">⚡</div>
+    <h1>NoProc Music</h1>
+    <div class="status-dot idle" id="status-dot"></div>
+</div>
+
+<div id="playing-view" style="display:none">
+    <div class="now-playing">
+        <div class="label">Now Playing</div>
+        <div class="track-row">
+            <img class="artwork" id="popup-artwork" src="" alt="Art">
+            <div class="track-info">
+                <div class="track-title" id="popup-title">—</div>
+                <div class="track-artist" id="popup-artist">—</div>
+            </div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="popup-progress"></div>
+        </div>
+        <div class="time-row">
+            <span id="popup-current">0:00</span>
+            <span id="popup-total">0:00</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="ctrl-btn" id="popup-prev" title="Previous">⏮</button>
+        <button class="ctrl-btn play" id="popup-play" title="Play / Pause">⏸</button>
+        <button class="ctrl-btn" id="popup-next" title="Next">⏭</button>
+    </div>
+</div>
+
+<div id="idle-view">
+    <div class="idle-state">
+        <div class="icon">🎵</div>
+        <div>Play music on YouTube, Spotify, or SoundCloud and it'll appear here.</div>
+    </div>
+</div>
+
+<script>
+    let currentMeta = null;
+
+    function formatTime(sec) {
+        if (!isFinite(sec) || sec < 0) return '0:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function updateUI(meta) {
+        if (!meta || !meta.title) return;
+        currentMeta = meta;
+
+        document.getElementById('idle-view').style.display = 'none';
+        document.getElementById('playing-view').style.display = 'block';
+
+        const dot = document.getElementById('status-dot');
+        dot.classList.toggle('idle', !meta.isPlaying);
+
+        document.getElementById('popup-title').textContent = meta.title || '—';
+        document.getElementById('popup-artist').textContent = meta.artist || '—';
+
+        const artEl = document.getElementById('popup-artwork');
+        if (meta.artwork) artEl.src = meta.artwork;
+
+        const pct = meta.duration > 0 ? (meta.currentTime / meta.duration) * 100 : 0;
+        document.getElementById('popup-progress').style.width = pct + '%';
+        document.getElementById('popup-current').textContent = formatTime(meta.currentTime);
+        document.getElementById('popup-total').textContent = formatTime(meta.duration);
+
+        document.getElementById('popup-play').textContent = meta.isPlaying ? '⏸' : '▶';
+    }
+
+    // Poll background for latest metadata
+    function poll() {
+        chrome.runtime.sendMessage({ type: 'GET_METADATA' }, (resp) => {
+            if (chrome.runtime.lastError) return;
+            if (resp && resp.metadata) updateUI(resp.metadata);
+        });
+    }
+
+    poll();
+    setInterval(poll, 1500);
+
+    // Controls
+    function sendControl(action) {
+        chrome.runtime.sendMessage({ type: 'MUSIC_CONTROL', action });
+        // Optimistic UI update
+        if (action === 'playPause' && currentMeta) {
+            currentMeta.isPlaying = !currentMeta.isPlaying;
+            document.getElementById('popup-play').textContent = currentMeta.isPlaying ? '⏸' : '▶';
+            document.getElementById('status-dot').classList.toggle('idle', !currentMeta.isPlaying);
+        }
+    }
+
+    document.getElementById('popup-prev').addEventListener('click', () => sendControl('previous'));
+    document.getElementById('popup-play').addEventListener('click', () => sendControl('playPause'));
+    document.getElementById('popup-next').addEventListener('click', () => sendControl('next'));
+</script>
+</body>
+</html>

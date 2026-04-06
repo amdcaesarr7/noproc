@@ -1,0 +1,602 @@
+// ==========================================
+// GLOBALS & SETUP (From CDNs)
+// ==========================================
+const { useState, useEffect, useRef, useMemo, useCallback, useId, forwardRef, useImperativeHandle } = React;
+const { motion, useScroll, useTransform, useAnimation, AnimatePresence } = window.Motion;
+// GSAP and ScrollTrigger are global
+gsap.registerPlugin(ScrollTrigger);
+
+// ==========================================
+// 1. SPACE BACKGROUND (Antigravity Interactive)
+// ==========================================
+const SpaceBackground = () => {
+    const containerRef = useRef(null);
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2('#020202', 0.0008);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.z = 800;
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        containerRef.current.appendChild(renderer.domElement);
+
+        const geometry = new THREE.BufferGeometry();
+        const particlesCount = 2000;
+        const posArray = new Float32Array(particlesCount * 3);
+        const colorsArray = new Float32Array(particlesCount * 3);
+
+        for(let i = 0; i < particlesCount * 3; i+=3) {
+            const r = 2000 * Math.cbrt(Math.random());
+            const theta = Math.random() * 2 * Math.PI;
+            const phi = Math.acos(2 * Math.random() - 1);
+            posArray[i] = r * Math.sin(phi) * Math.cos(theta);
+            posArray[i+1] = r * Math.sin(phi) * Math.sin(theta);
+            posArray[i+2] = r * Math.cos(phi);
+
+            const colorRnd = Math.random();
+            if (colorRnd > 0.85) {
+                colorsArray[i] = 0.545; colorsArray[i+1] = 0.36; colorsArray[i+2] = 0.965;
+            } else if (colorRnd > 0.7) {
+                colorsArray[i] = 0.368; colorsArray[i+1] = 0.09; colorsArray[i+2] = 0.92;
+            } else {
+                colorsArray[i] = 1.0; colorsArray[i+1] = 1.0; colorsArray[i+2] = 1.0;
+            }
+        }
+        geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
+
+        const material = new THREE.PointsMaterial({
+            size: 2.5, vertexColors: true, transparent: true, opacity: 0.9, sizeAttenuation: true, blending: THREE.AdditiveBlending
+        });
+        const particlesMesh = new THREE.Points(geometry, material);
+        scene.add(particlesMesh);
+
+        let mouseX = 0; let mouseY = 0; let targetX = 0; let targetY = 0;
+        const onDocumentMouseMove = (event) => {
+            mouseX = (event.clientX - window.innerWidth / 2) * 0.05;
+            mouseY = (event.clientY - window.innerHeight / 2) * 0.05;
+        };
+        document.addEventListener('mousemove', onDocumentMouseMove);
+
+        let animationFrameId;
+        const tick = () => {
+            targetX = mouseX * 0.002; targetY = mouseY * 0.002;
+            particlesMesh.rotation.y += 0.0003; particlesMesh.rotation.x += 0.0001;
+            scene.rotation.x += 0.05 * (targetY - scene.rotation.x);
+            scene.rotation.y += 0.05 * (targetX - scene.rotation.y);
+            renderer.render(scene, camera);
+            animationFrameId = requestAnimationFrame(tick);
+        };
+        tick();
+
+        const onWindowResize = () => {
+             camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+        window.addEventListener('resize', onWindowResize);
+        return () => {
+            window.removeEventListener('resize', onWindowResize); document.removeEventListener('mousemove', onDocumentMouseMove);
+            cancelAnimationFrame(animationFrameId); containerRef.current?.removeChild(renderer.domElement);
+            geometry.dispose(); material.dispose(); renderer.dispose();
+        };
+    }, []);
+    return <div ref={containerRef} id="canvas-container"></div>;
+};
+
+// ==========================================
+// 2. TARGET CURSOR (Snippets)
+// ==========================================
+const TargetCursor = () => {
+  const cursorRef = useRef(null);
+  const cornersRef = useRef(null);
+  const spinTl = useRef(null);
+  const dotRef = useRef(null);
+
+  const isActiveRef = useRef(false);
+  const targetCornerPositionsRef = useRef(null);
+  const tickerFnRef = useRef(null);
+  const activeStrengthRef = useRef(0);
+
+  const moveCursor = useCallback((x, y) => {
+    if (!cursorRef.current) return;
+    gsap.to(cursorRef.current, { x, y, duration: 0.1, ease: 'power3.out' });
+  }, []);
+
+  useEffect(() => {
+    const originalCursor = document.body.style.cursor;
+    document.body.style.cursor = 'none';
+    const cursor = cursorRef.current;
+    cornersRef.current = cursor.querySelectorAll('.target-cursor-corner');
+    
+    let activeTarget = null; let currentLeaveHandler = null; let resumeTimeout = null;
+    const cleanupTarget = target => { if (currentLeaveHandler) target.removeEventListener('mouseleave', currentLeaveHandler); currentLeaveHandler = null; };
+
+    gsap.set(cursor, { xPercent: -50, yPercent: -50, x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    spinTl.current = gsap.timeline({ repeat: -1 }).to(cursor, { rotation: '+=360', duration: 2, ease: 'none' });
+
+    const tickerFn = () => {
+      if (!targetCornerPositionsRef.current || !cornersRef.current || activeStrengthRef.current === 0) return;
+      const strength = activeStrengthRef.current;
+      const cursorX = gsap.getProperty(cursorRef.current, 'x');
+      const cursorY = gsap.getProperty(cursorRef.current, 'y');
+      const corners = Array.from(cornersRef.current);
+      corners.forEach((corner, i) => {
+        const currentX = gsap.getProperty(corner, 'x'); const currentY = gsap.getProperty(corner, 'y');
+        const targetX = targetCornerPositionsRef.current[i].x - cursorX; const targetY = targetCornerPositionsRef.current[i].y - cursorY;
+        const finalX = currentX + (targetX - currentX) * strength; const finalY = currentY + (targetY - currentY) * strength;
+        const duration = strength >= 0.99 ? 0.2 : 0.05;
+        gsap.to(corner, { x: finalX, y: finalY, duration: duration, ease: duration === 0 ? 'none' : 'power1.out', overwrite: 'auto' });
+      });
+    };
+    tickerFnRef.current = tickerFn;
+
+    const moveHandler = e => moveCursor(e.clientX, e.clientY);
+    window.addEventListener('mousemove', moveHandler);
+
+    const mouseDownHandler = () => { gsap.to(dotRef.current, { scale: 0.7, duration: 0.3 }); gsap.to(cursorRef.current, { scale: 0.9, duration: 0.2 }); };
+    const mouseUpHandler = () => { gsap.to(dotRef.current, { scale: 1, duration: 0.3 }); gsap.to(cursorRef.current, { scale: 1, duration: 0.2 }); };
+    window.addEventListener('mousedown', mouseDownHandler); window.addEventListener('mouseup', mouseUpHandler);
+
+    const enterHandler = e => {
+      const match = e.target.closest('.cursor-target');
+      if (!match || activeTarget === match) return;
+      if (activeTarget) cleanupTarget(activeTarget);
+      if (resumeTimeout) { clearTimeout(resumeTimeout); resumeTimeout = null; }
+
+      activeTarget = match;
+      const corners = Array.from(cornersRef.current);
+      corners.forEach(corner => gsap.killTweensOf(corner));
+      gsap.killTweensOf(cursorRef.current, 'rotation');
+      spinTl.current?.pause();
+      gsap.set(cursorRef.current, { rotation: 0 });
+
+      const rect = match.getBoundingClientRect();
+      const cursorX = gsap.getProperty(cursorRef.current, 'x'); const cursorY = gsap.getProperty(cursorRef.current, 'y');
+      targetCornerPositionsRef.current = [
+        { x: rect.left - 3, y: rect.top - 3 }, { x: rect.right + 3 - 12, y: rect.top - 3 },
+        { x: rect.right + 3 - 12, y: rect.bottom + 3 - 12 }, { x: rect.left - 3, y: rect.bottom + 3 - 12 }
+      ];
+
+      isActiveRef.current = true;
+      gsap.ticker.add(tickerFnRef.current);
+      gsap.to(activeStrengthRef, { current: 1, duration: 0.2, ease: 'power2.out' });
+      corners.forEach((corner, i) => gsap.to(corner, { x: targetCornerPositionsRef.current[i].x - cursorX, y: targetCornerPositionsRef.current[i].y - cursorY, duration: 0.2, ease: 'power2.out' }));
+
+      const leaveHandler = () => {
+        gsap.ticker.remove(tickerFnRef.current);
+        isActiveRef.current = false; targetCornerPositionsRef.current = null;
+        gsap.set(activeStrengthRef, { current: 0, overwrite: true }); activeTarget = null;
+        if (cornersRef.current) {
+          const positions = [{ x: -18, y: -18 }, { x: 6, y: -18 }, { x: 6, y: 6 }, { x: -18, y: 6 }];
+          const tl = gsap.timeline();
+          Array.from(cornersRef.current).forEach((corner, index) => tl.to(corner, { x: positions[index].x, y: positions[index].y, duration: 0.3, ease: 'power3.out' }, 0));
+        }
+        resumeTimeout = setTimeout(() => {
+          if (!activeTarget && cursorRef.current && spinTl.current) {
+            const currentRotation = gsap.getProperty(cursorRef.current, 'rotation') % 360;
+            spinTl.current.kill(); spinTl.current = gsap.timeline({ repeat: -1 }).to(cursorRef.current, { rotation: '+=360', duration: 2, ease: 'none' });
+            gsap.to(cursorRef.current, { rotation: currentRotation + 360, duration: 2 * (1 - currentRotation / 360), ease: 'none', onComplete: () => spinTl.current?.restart() });
+          }
+          resumeTimeout = null;
+        }, 50);
+        cleanupTarget(match);
+      };
+      currentLeaveHandler = leaveHandler;
+      match.addEventListener('mouseleave', leaveHandler);
+    };
+    window.addEventListener('mouseover', enterHandler, { passive: true });
+
+    return () => {
+      if (tickerFnRef.current) gsap.ticker.remove(tickerFnRef.current);
+      window.removeEventListener('mousemove', moveHandler); window.removeEventListener('mouseover', enterHandler);
+      window.removeEventListener('mousedown', mouseDownHandler); window.removeEventListener('mouseup', mouseUpHandler);
+      if (activeTarget) cleanupTarget(activeTarget);
+      spinTl.current?.kill(); document.body.style.cursor = originalCursor;
+    };
+  }, [moveCursor]);
+
+  return (
+    <div ref={cursorRef} className="target-cursor-wrapper mix-blend-difference">
+      <div ref={dotRef} className="target-cursor-dot" />
+      <div className="target-cursor-corner corner-tl" />
+      <div className="target-cursor-corner corner-tr" />
+      <div className="target-cursor-corner corner-br" />
+      <div className="target-cursor-corner corner-bl" />
+    </div>
+  );
+};
+
+// ==========================================
+// 3. CURVED LOOP
+// ==========================================
+const CurvedLoop = ({ marqueeText }) => {
+  const measureRef = useRef(null); const textPathRef = useRef(null); const pathRef = useRef(null);
+  const [spacing, setSpacing] = useState(0); const [offset, setOffset] = useState(0);
+  const text = marqueeText + '\u00A0';
+  const pathId = "curve-loop";
+  const pathD = `M-100,20 Q500,200 1540,20`;
+  const totalText = spacing ? Array(Math.ceil(1800 / spacing) + 2).fill(text).join('') : text;
+
+  useEffect(() => { if (measureRef.current) setSpacing(measureRef.current.getComputedTextLength()); }, [text]);
+  useEffect(() => { if (!spacing || !textPathRef.current) return;
+    let frame = 0;
+    const step = () => {
+      const currentOffset = parseFloat(textPathRef.current.getAttribute('startOffset') || '0');
+      let newOffset = currentOffset - 2;
+      if (newOffset <= -spacing) newOffset += spacing;
+      textPathRef.current.setAttribute('startOffset', newOffset + 'px');
+      setOffset(newOffset);
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [spacing]);
+
+  return (
+    <div className="curved-loop-jacket" style={{ visibility: spacing > 0 ? 'visible' : 'hidden' }}>
+      <svg className="curved-loop-svg" viewBox="0 0 1440 120">
+        <text ref={measureRef} xmlSpace="preserve" style={{ visibility: 'hidden', opacity: 0, pointerEvents: 'none' }}>{text}</text>
+        <defs><path ref={pathRef} id={pathId} d={pathD} fill="none" stroke="transparent" /></defs>
+        {spacing > 0 && (
+          <text fontWeight="900" xmlSpace="preserve" className="text-4xl text-accent/60 tracking-widest font-display">
+            <textPath ref={textPathRef} href={`#${pathId}`} startOffset={offset + 'px'}>{totalText}</textPath>
+          </text>
+        )}
+      </svg>
+    </div>
+  );
+};
+
+// ==========================================
+// 4. ROTATING TEXT
+// ==========================================
+const RotatingText = ({ texts }) => {
+  const [index, setIndex] = useState(0);
+  useEffect(() => { const t = setInterval(() => setIndex(prev => (prev + 1) % texts.length), 2500); return () => clearInterval(t); }, [texts]);
+
+  return (
+    <span className="text-rotate inline-flex">
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={index}
+          initial={{ y: '100%', opacity: 0, scale: 0.9 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: '-120%', opacity: 0, scale: 1.1 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300, duration: 0.5 }}
+          className="text-gradient-space inline-block font-display font-black"
+        >
+          {texts[index]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+};
+
+// ==========================================
+// 5. BLUR TEXT
+// ==========================================
+const BlurText = ({ text, delay = 0.5 }) => {
+  const words = text.split(' ');
+  return (
+    <motion.h4 
+       initial={{ opacity: 0 }}
+       whileInView={{ opacity: 1 }}
+       viewport={{ once: true, margin: "-100px" }}
+       className="flex flex-wrap text-4xl mb-6 font-display font-bold text-white text-center justify-center justify-self-center mx-auto"
+    >
+      {words.map((w, i) => (
+        <motion.span 
+          key={i}
+          initial={{ filter: 'blur(10px)', opacity: 0, y: 20 }}
+          whileInView={{ filter: 'blur(0px)', opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: delay + i * 0.1, duration: 0.6, ease: "easeOut" }}
+          className="mr-2"
+        >
+          {w}
+        </motion.span>
+      ))}
+    </motion.h4>
+  );
+};
+
+// ==========================================
+// 6. SCROLL FLOAT & REVEAL
+// ==========================================
+const ScrollFloat = ({ children, className }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const chars = ref.current.querySelectorAll('.char');
+    gsap.fromTo(chars, 
+      { opacity: 0, yPercent: 120, scaleY: 2.3, transformOrigin: '50% 0%' },
+      { opacity: 1, yPercent: 0, scaleY: 1, stagger: 0.05, scrollTrigger: { trigger: ref.current, start: 'top bottom-=100', end: 'bottom center', scrub: true } }
+    );
+  }, []);
+  return (
+    <div ref={ref} className={`scroll-float ${className}`}>
+      <div className="scroll-float-text">
+        {children.split('').map((char, i) => <span key={i} className="char">{char === ' ' ? '\u00A0' : char}</span>)}
+      </div>
+    </div>
+  );
+};
+
+const ScrollReveal = ({ children, className }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const words = ref.current.querySelectorAll('.word');
+    gsap.fromTo(words, 
+      { opacity: 0.1, filter: 'blur(4px)' },
+      { opacity: 1, filter: 'blur(0px)', stagger: 0.05, scrollTrigger: { trigger: ref.current, start: 'top bottom-=20%', end: 'bottom center', scrub: true } }
+    );
+  }, []);
+  return (
+    <div ref={ref} className={`scroll-reveal ${className}`}>
+      <div className="scroll-reveal-text">
+        {children.split(/(\s+)/).map((word, i) => word.trim() ? <span key={i} className="word">{word}</span> : word)}
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// GRADULAR BLUR
+// ==========================================
+const GradualBlur = ({ position = 'bottom', strength = 2, height = '6rem', zIndex = 1000 }) => {
+  const blurDivs = useMemo(() => {
+    const divs = []; const count = 5;
+    for (let i = 1; i <= count; i++) {
+      let progress = i / count;
+      let blurValue = 0.0625 * (progress * count + 1) * strength;
+      const p1 = Math.round(((i - 1) / count) * 100);
+      const p2 = Math.round((i / count) * 100);
+      const gradient = `transparent ${p1}%, black ${p2}%`;
+      const direction = position === 'bottom' ? 'to bottom' : 'to top';
+      divs.push(<div key={i} style={{ position: 'absolute', inset: '0', WebkitMaskImage: `linear-gradient(${direction}, ${gradient})`, WebkitBackdropFilter: `blur(${blurValue}rem)`, backdropFilter: `blur(${blurValue}rem)` }} />);
+    }
+    return divs;
+  }, [position, strength]);
+
+  return (
+    <div className="gradual-blur gradual-blur-parent opacity-100" style={{ position: 'absolute', pointerEvents: 'none', zIndex, height, width: '100%', left: 0, [position]: 0 }}>
+      {blurDivs}
+    </div>
+  );
+};
+
+// ==========================================
+// SECTIONS
+// ==========================================
+
+const Header = () => (
+    <motion.header 
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="fixed top-0 w-full z-50 px-8 py-6 flex justify-between items-center bg-black/50 backdrop-blur-md border-b border-white/5"
+    >
+        <div className="font-display font-bold text-2xl tracking-widest text-white cursor-target hover:text-accent transition-colors">
+            <span className="opacity-50">No</span>Proc
+        </div>
+        <div className="flex items-center gap-6">
+            <div className="text-xs font-bold tracking-[0.2em] text-white px-4 py-2 border border-white/20 rounded-full cursor-target hover:bg-white/10 transition-colors">
+                CAESARR
+            </div>
+        </div>
+    </motion.header>
+);
+
+const Hero = () => {
+    return (
+        <section className="relative min-h-[100vh] flex flex-col justify-center items-center text-center px-6 overflow-hidden pt-10">
+            <GradualBlur position="bottom" height="15rem" strength={1} />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2, ease: "easeOut" }}
+                className="max-w-5xl z-10 w-full flex flex-col items-center cursor-target"
+            >
+                <h1 className="font-display text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter mb-6 leading-[1.1]">
+                    <span className="text-white block">REDEFINE YOUR</span>
+                    <RotatingText texts={['PRODUCTIVITY', 'CLARITY', 'FOCUS', 'POTENTIAL']} />
+                </h1>
+                
+                <p className="text-lg md:text-2xl text-gray-400 mb-12 max-w-2xl font-light leading-relaxed">
+                    NoProc is a sanctuary for deep work. Erase distractions, align your tasks like constellations, and execute flawlessly.
+                </p>
+                
+                <a href="https://noproc.gt.tc/NoProc" target="_blank" className="glow-btn px-10 py-5 rounded-full font-bold tracking-widest text-sm flex items-center justify-center gap-3 cursor-target group">
+                    <span>LAUNCH NOPROC</span>
+                </a>
+            </motion.div>
+        </section>
+    );
+};
+
+const ImageTrail = () => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (window.innerWidth <= 768) return; // Disable on mobile
+
+    let mousePos = { x: 0, y: 0 };
+    let lastMousePos = { x: 0, y: 0 };
+    let cacheMousePos = { x: 0, y: 0 };
+    let zIndexVal = 1;
+
+    const images = Array.from(container.querySelectorAll('.trail-img')).map(el => ({
+      el,
+      inner: el.querySelector('.trail-img-inner'),
+      rect: el.getBoundingClientRect()
+    }));
+
+    if (images.length === 0) return;
+
+    let imgPosition = 0;
+    const threshold = 80;
+
+    const handlePointerMove = (e) => {
+      const rect = container.getBoundingClientRect();
+      mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+
+    container.addEventListener('mousemove', handlePointerMove);
+
+    const lerp = (a, b, n) => (1 - n) * a + n * b;
+    const getDist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+
+    let raf;
+    const render = () => {
+      let distance = getDist(mousePos, lastMousePos);
+      cacheMousePos.x = lerp(cacheMousePos.x, mousePos.x, 0.1);
+      cacheMousePos.y = lerp(cacheMousePos.y, mousePos.y, 0.1);
+
+      if (distance > threshold) {
+        // Show Next Image
+        zIndexVal++;
+        imgPosition = imgPosition < images.length - 1 ? imgPosition + 1 : 0;
+        const img = images[imgPosition];
+        gsap.killTweensOf(img.el);
+
+        gsap.timeline()
+          .fromTo(img.el, 
+            { opacity: 1, scale: 1, zIndex: zIndexVal, x: cacheMousePos.x - img.rect.width / 2, y: cacheMousePos.y - img.rect.height / 2 },
+            { duration: 0.4, ease: 'power1', x: mousePos.x - img.rect.width / 2, y: mousePos.y - img.rect.height / 2 }, 0)
+          .to(img.el, { duration: 0.4, ease: 'power3', opacity: 0, scale: 0.2 }, 0.4);
+
+        lastMousePos = { ...mousePos };
+      }
+      raf = requestAnimationFrame(render);
+    };
+
+    raf = requestAnimationFrame(render);
+
+    return () => {
+      container.removeEventListener('mousemove', handlePointerMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative w-full h-[600px] overflow-hidden my-20 border border-white/10 rounded-3xl bg-black/20 hidden md:block cursor-target">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/20 font-display text-4xl font-bold tracking-widest pointer-events-none text-center">
+        MOVE YOUR CURSOR<br/><span className="text-xl font-sans tracking-normal font-light">To reveal the timeline</span>
+      </div>
+      
+      {/* 5 Trail Images */}
+      {[1, 2, 3, 4, 5].map((_, i) => (
+         <div key={i} className="trail-img absolute top-0 left-0 w-64 h-80 opacity-0 pointer-events-none rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+            <div className="trail-img-inner w-full h-full bg-gradient-to-br from-nebula/60 to-black/90 flex items-center justify-center p-6 text-white text-center font-display text-xl font-bold">
+               NOPROC <br/> UI MODULE {i+1}
+            </div>
+         </div>
+      ))}
+    </div>
+  );
+};
+
+const Showcase = () => {
+    return (
+        <section id="showcase" className="py-20 relative z-10 px-6">
+            <CurvedLoop marqueeText="VOID TIMERS // NEURAL NOTES // OMNI SYSTEM //" />
+            <div className="max-w-7xl mx-auto mt-20">
+                <ScrollFloat className="text-4xl sm:text-6xl md:text-7xl font-display font-black text-white text-center mb-20 cursor-target">
+                    A Universe of Tools
+                </ScrollFloat>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="glass-panel p-10 cursor-target group relative overflow-hidden">
+                        <h3 className="text-3xl font-display font-bold mb-4 text-white group-hover:text-accent transition-colors">Void Timers</h3>
+                        <ScrollReveal className="text-gray-400 leading-relaxed font-light text-lg">
+                            Sync your energy. Our timers use minimal visual disruption to keep you grounded in the flow state.
+                        </ScrollReveal>
+                    </div>
+                    <div className="glass-panel p-10 cursor-target group relative overflow-hidden">
+                        <h3 className="text-3xl font-display font-bold mb-4 text-white group-hover:text-accent transition-colors">Neural Notes</h3>
+                        <ScrollReveal className="text-gray-400 leading-relaxed font-light text-lg">
+                            Structure complex thoughts instantly. Formatted in a dark, beautiful interface that never fights for your attention.
+                        </ScrollReveal>
+                    </div>
+                    <div className="glass-panel p-10 cursor-target group relative overflow-hidden">
+                        <h3 className="text-3xl font-display font-bold mb-4 text-white group-hover:text-accent transition-colors">Omni System</h3>
+                        <ScrollReveal className="text-gray-400 leading-relaxed font-light text-lg">
+                            It is entirely built for you. CAESARR's logic scales gracefully whether you're building software or writing a novel.
+                        </ScrollReveal>
+                    </div>
+                </div>
+
+                <ImageTrail />
+            </div>
+        </section>
+    );
+};
+
+const Testimonials = () => {
+    return (
+        <section id="stories" className="py-40 relative z-10 bg-gradient-to-b from-transparent to-[#020202]">
+            <div className="max-w-5xl mx-auto px-6">
+                <BlurText text="ECHOES FROM THE VOID" delay={0} />
+
+                <div className="flex flex-col mt-20">
+                    <div className="py-16 border-t border-white/10 cursor-target group">
+                        <h4 className="text-xl font-bold text-accent font-display tracking-widest uppercase mb-4">Julian Maddox</h4>
+                        <ScrollReveal className="text-2xl sm:text-3xl font-light text-gray-300 leading-snug">
+                            "CAESARR solved a problem I didn't know I had. The interface is impossibly clean and my daily output has doubled simply because I'm not fighting UI clutter."
+                        </ScrollReveal>
+                    </div>
+                    <div className="py-16 border-t border-white/10 cursor-target group">
+                        <h4 className="text-xl font-bold text-accent font-display tracking-widest uppercase mb-4">Sophia Lin</h4>
+                        <ScrollReveal className="text-2xl sm:text-3xl font-light text-gray-300 leading-snug">
+                            "You don't just use NoProc, you experience it. The dark space aesthetic feels incredibly premium and calms my mind instantly when I log on."
+                        </ScrollReveal>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const Footer = () => (
+    <footer className="py-40 relative z-10 bg-[#020202] text-center overflow-hidden">
+        <GradualBlur position="top" height="10rem" strength={1} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[15vw] font-display font-black text-white/[0.02] whitespace-nowrap select-none pointer-events-none">
+            CAESARR
+        </div>
+
+        <div className="relative z-10 max-w-4xl mx-auto px-6 flex flex-col items-center">
+            <h2 className="text-4xl font-black text-white mb-4 font-display cursor-target">Ready to Focus?</h2>
+            <p className="text-gray-400 mb-10 text-lg font-light max-w-md mx-auto">
+                Step away from the noise and elevate your work.
+            </p>
+            <a href="https://noproc.gt.tc/NoProc" target="_blank" className="glow-btn px-10 py-4 rounded-full font-bold tracking-widest text-sm mb-20 bg-white/5 border border-white/20 cursor-target group">
+                <span>ENTER NOPROC</span>
+            </a>
+            
+            <p className="text-gray-500 text-sm tracking-widest uppercase">
+                A masterpiece by <strong className="text-white">CAESARR</strong>
+            </p>
+        </div>
+    </footer>
+);
+
+const App = () => {
+    return (
+        <>
+            <TargetCursor />
+            <SpaceBackground />
+            <Header />
+            <main>
+                <Hero />
+                <Showcase />
+                <Testimonials />
+            </main>
+            <Footer />
+        </>
+    );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);

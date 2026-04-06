@@ -1,0 +1,141 @@
+/* ══════════════════════════════════════════════════
+   NoProc — Design System Tokens
+   Apple-Grade · Glassmorphism · Live Gradients
+   ══════════════════════════════════════════════════ */
+
+:root {
+    /* Typography — SF Pro-Inspired Stack */
+    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+
+    /* Motion — Apple Spring Physics */
+    --spring: cubic-bezier(0.22, 1, 0.36, 1);
+    --transition-slow: 0.8s var(--spring);
+    --transition-medium: 0.5s var(--spring);
+    --transition-fast: 0.25s var(--spring);
+    --transition-micro: 0.15s var(--spring);
+
+    /* Spacing — 8pt Grid */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --space-3xl: 64px;
+
+    /* Legacy compat */
+    --padding-sm: 12px;
+    --padding-md: 24px;
+    --padding-lg: 40px;
+
+    /* Radii — Continuous Corners */
+    --radius-xs: 8px;
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-xl: 32px;
+    --radius-2xl: 40px;
+    --radius-pill: 100px;
+
+    /* Legacy compat */
+    --border-radius-xl: 32px;
+    --border-radius-lg: 24px;
+    --border-radius-md: 16px;
+    --border-radius-sm: 12px;
+
+    /* Glass Tokens */
+    --glass-blur: 32px;
+    --glass-saturate: 200%;
+}
+
+/* ─── Dark Theme ─── */
+.dark-theme {
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a0c;
+    --bg-elevated: #141416;
+    --text-primary: #f5f5f7;
+    --text-secondary: rgba(245, 245, 247, 0.55);
+    --text-tertiary: rgba(245, 245, 247, 0.3);
+    --accent-primary: #7c3aed;
+    --accent-secondary: #a855f7;
+    --accent-tertiary: #c084fc;
+    --glass-bg: rgba(28, 28, 30, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-border-light: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    --glass-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --gradient-1: rgba(124, 58, 237, 0.15);
+    --gradient-2: rgba(168, 85, 247, 0.1);
+    --gradient-3: rgba(59, 130, 246, 0.08);
+    --danger: #ff453a;
+    --success: #30d158;
+    --warning: #ffd60a;
+}
+
+/* ─── Light Theme ─── */
+.light-theme {
+    --bg-primary: #f5f5f7;
+    --bg-secondary: #ffffff;
+    --bg-elevated: #ffffff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --text-tertiary: rgba(29, 29, 31, 0.25);
+    --accent-primary: #6366f1;
+    --accent-secondary: #8b5cf6;
+    --accent-tertiary: #a78bfa;
+    --glass-bg: rgba(255, 255, 255, 0.82);
+    --glass-border: rgba(0, 0, 0, 0.04);
+    --glass-border-light: rgba(0, 0, 0, 0.08);
+    --glass-shadow: 0 24px 80px rgba(0, 0, 0, 0.06);
+    --glass-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    --gradient-1: rgba(99, 102, 241, 0.08);
+    --gradient-2: rgba(139, 92, 246, 0.06);
+    --gradient-3: rgba(59, 130, 246, 0.05);
+    --danger: #ff3b30;
+    --success: #34c759;
+    --warning: #ff9500;
+}
+
+/* ─── Gradient Presets ─── */
+.gradient-aurora {
+    --live-grad: linear-gradient(135deg, #0f0c29 0%, #302b63 40%, #24243e 100%);
+    --blob-1: rgba(124, 58, 237, 0.2);
+    --blob-2: rgba(34, 211, 238, 0.15);
+    --blob-3: rgba(168, 85, 247, 0.12);
+}
+
+.gradient-sunset {
+    --live-grad: linear-gradient(135deg, #0c0c1d 0%, #1a0a2e 50%, #2d1b3d 100%);
+    --blob-1: rgba(251, 146, 60, 0.18);
+    --blob-2: rgba(244, 63, 94, 0.15);
+    --blob-3: rgba(168, 85, 247, 0.1);
+}
+
+.gradient-ocean {
+    --live-grad: linear-gradient(135deg, #020617 0%, #0c1426 50%, #0f172a 100%);
+    --blob-1: rgba(6, 182, 212, 0.18);
+    --blob-2: rgba(59, 130, 246, 0.15);
+    --blob-3: rgba(99, 102, 241, 0.1);
+}
+
+.gradient-midnight {
+    --live-grad: linear-gradient(135deg, #000000 0%, #0a0a0f 50%, #111118 100%);
+    --blob-1: rgba(139, 92, 246, 0.12);
+    --blob-2: rgba(99, 102, 241, 0.08);
+    --blob-3: rgba(67, 56, 202, 0.06);
+}
+
+.gradient-nature {
+    --live-grad: linear-gradient(135deg, #021a0f 0%, #0a1e15 50%, #0f2920 100%);
+    --blob-1: rgba(34, 197, 94, 0.15);
+    --blob-2: rgba(16, 185, 129, 0.12);
+    --blob-3: rgba(20, 184, 166, 0.08);
+}
+
+.gradient-rose {
+    --live-grad: linear-gradient(135deg, #1a0a10 0%, #2d0f1a 50%, #3d1025 100%);
+    --blob-1: rgba(244, 63, 94, 0.18);
+    --blob-2: rgba(236, 72, 153, 0.12);
+    --blob-3: rgba(168, 85, 247, 0.08);
+}

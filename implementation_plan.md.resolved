@@ -1,0 +1,89 @@
+# Apple-Grade UI Overhaul + Platform-Specific Music
+
+## Goal
+Transform NoProc into a world-class, Apple-grade productivity dashboard. Add platform-specific music controls, a settings panel with custom wallpaper/gradient support, and breathtaking aesthetics.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Platform-Specific Music**: Extension controls will only appear on desktop (>900px). Spotify miniplayer will only appear on mobile (<900px). Both will share the same metadata system.
+
+> [!IMPORTANT]
+> **Settings Panel**: A new full-screen overlay panel accessible from the sidebar gear icon. Users can pick live gradient presets or upload a custom wallpaper image (stored in localStorage as base64).
+
+---
+
+## Proposed Changes
+
+### 1. Settings Panel (New Feature)
+
+#### [NEW] [settings.js](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/js/settings.js)
+- `SettingsManager` class with [open()](file:///c:/Users/admin/OneDrive/Documents/.Caesar%20Codess%21/NoProc/js/timer.js#104-115), `close()`, [save()](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/js/tasks.js#55-58), [load()](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess%21/NoProc/js/spotify.js#121-157)
+- **Background Options**:
+  - 6 curated live gradient presets (Aurora, Sunset, Ocean, Midnight, Nature, Custom)
+  - Custom wallpaper upload via `<input type="file">` → base64 → localStorage
+- **Platform detection**: `isMobile()` check using `window.innerWidth <= 900`
+- Saves preferences to `localStorage`
+
+#### [MODIFY] [index.html](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/index.html)
+- Add Settings overlay `<div id="settings-overlay">` with gradient grid + wallpaper upload
+- Add `data-platform="desktop"` / `data-platform="mobile"` attributes to music controls
+- Enhance `<head>` with Apple-style meta tags
+
+#### [NEW] [css/settings.css](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/css/settings.css)
+- Full-screen glass panel overlay styles
+- Gradient preview cards, wallpaper upload area
+- Smooth open/close animations
+
+---
+
+### 2. Platform-Specific Music Controls
+
+#### [MODIFY] [app.js](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/js/app.js)
+- Add `detectPlatform()` method → shows/hides extension or Spotify controls
+- Desktop: Show extension bridge control bar in sidebar footer
+- Mobile: Show Spotify miniplayer at bottom
+- Listen for `resize` events to re-evaluate
+
+#### [MODIFY] [spotify.js](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/js/spotify.js)
+- Skip initialization if `window.innerWidth > 900` (desktop)
+- Only load SDK and show login on mobile
+
+---
+
+### 3. Apple-Grade Aesthetic Overhaul
+
+#### [MODIFY] [variables.css](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/css/variables.css)
+- Add SF Pro-inspired font stack fallback
+- Refine color palette with Apple-style neutral grays + vivid accent
+- Add gradient preset CSS custom properties
+
+#### [MODIFY] [layout.css](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/css/layout.css)
+- Enhanced `bg-wrapper` to support both live gradients AND wallpaper images
+- Wallpaper mode: `background-image` with cover + blur overlay
+- Refined sidebar: Apple-style translucent pill navigation
+- Clock: Apple Dynamic Island-inspired container
+
+#### [MODIFY] [components.css](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/css/components.css)
+- Buttons: Gradient fills with hover bloom effects
+- Cards: Frosted glass with inner light edges
+- Timer: Apple Watch-style radial with glow stroke
+- Miniplayer: Album-art-driven dynamic glow
+
+#### [MODIFY] [animations.css](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess!/NoProc/css/animations.css)
+- Spring physics curves for all transitions
+- `@keyframes shimmer` for gradient cards
+- Enhanced blob system with more organic movement
+- Parallax-style scroll effects
+
+---
+
+## Verification Plan
+
+### Manual Verification
+- Resize browser to test platform detection (extension vs Spotify toggle)
+- Open Settings → pick each gradient preset → verify live background change
+- Upload a wallpaper image → verify it persists after refresh
+- Test dark/light theme toggle with all gradient presets
+- Mobile viewport: Confirm Spotify bar, no extension controls
+- Desktop viewport: Confirm extension controls, no Spotify bar

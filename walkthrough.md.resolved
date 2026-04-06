@@ -1,0 +1,68 @@
+# NoProc — Apple-Grade UI Overhaul · Walkthrough
+
+## What Changed
+
+### 🎨 Design System ([variables.css](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/css/variables.css))
+- **Apple-inspired typography** with SF Pro fallback stack
+- **Spring physics** easing curves (`cubic-bezier(0.22, 1, 0.36, 1)`) for all transitions
+- **6 curated gradient presets**: Aurora, Sunset, Ocean, Midnight, Nature, Rose
+- New tokens: `--glass-inner-glow`, `--text-tertiary`, `--bg-elevated`
+
+### 🖼️ Settings Panel ([settings.js](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess%21/NoProc/js/settings.js) + [settings.css](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess%21/NoProc/css/settings.css))
+- Full-screen glass overlay accessible from sidebar gear icon
+- **Gradient picker**: 6 live-preview swatches with active state
+- **Custom wallpaper upload**: File picker → base64 → localStorage persistence
+- **Google Sign-In**: Uses Google Identity Services (GIS) OAuth
+  - Personalized greeting: "Good Morning, **Caesar**" with gradient text
+  - Avatar appears in sidebar footer
+  - Account section in settings with sign-out button
+
+### 🎵 Platform-Specific Music
+- **Desktop (>900px)**: Extension bridge controls active, Spotify login hidden
+- **Mobile (≤900px)**: Spotify miniplayer with bottom bar, extension hidden
+- Body classes `is-mobile` / `is-desktop` set dynamically
+
+### 🏗️ Layout ([layout.css](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/css/layout.css))
+- Wallpaper background layer with automatic dark overlay
+- **Continuous corner** radius system (Apple-style)
+- Responsive breakpoints: desktop → tablet (72px sidebar) → mobile (no sidebar)
+- User avatar styling in sidebar footer
+
+### ✨ Components ([components.css](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/css/components.css))
+- **Bloom buttons**: Gradient fills with hover glow overlay
+- **Glow timer**: SVG linearGradient stroke with `drop-shadow`
+- **Pill-style** timer mode selector
+- Platform-aware miniplayer (vertical pill desktop / horizontal bar mobile)
+
+### 🎬 Animations ([animations.css](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/css/animations.css))
+- `blurIn` / `blurOut` page transitions with scale
+- Enhanced `blobFloat` with rotation
+- `shimmer` keyframes for card loading states
+- `settingsIn` / `settingsCardIn` for overlay entrance
+- `colonBlink` for clock colon animation
+
+---
+
+## Files Modified
+
+| File | Action |
+|------|--------|
+| [css/variables.css](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/css/variables.css) | Overwritten |
+| [css/layout.css](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/css/layout.css) | Overwritten |
+| [css/components.css](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/css/components.css) | Overwritten |
+| [css/animations.css](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/css/animations.css) | Overwritten |
+| [css/settings.css](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess%21/NoProc/css/settings.css) | **New** |
+| [js/settings.js](file:///C:/Users/admin/OneDrive/Documents/.Caesar%20Codess%21/NoProc/js/settings.js) | **New** |
+| [js/app.js](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/js/app.js) | Overwritten |
+| [index.html](file:///C:/Users/admin/.gemini/antigravity/scratch/noproc/index.html) | Overwritten |
+
+## How to Use
+
+1. **Settings**: Click the ⚙️ gear icon in the sidebar footer
+2. **Change Background**: Pick a gradient swatch or upload a wallpaper
+3. **Sign In**: Click "Sign in with Google" in Settings → your name appears in the greeting
+4. **Music**: On desktop, use the extension. On mobile, connect Spotify via the bottom bar.
+
+## Requirements
+- **Google Auth**: Requires running on `https://noproc.gt.tc/` or a localhost origin configured in the Google Cloud Console
+- **Spotify**: Requires a local server (not `file://`)
